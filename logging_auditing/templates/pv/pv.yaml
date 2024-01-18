@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:  
+  name: hlfpvhelm
+spec:
+  storageClassName: standard 
+  accessModes: # defines the rights of the volume we are creating
+    - ReadWriteMany
+  capacity: # defines the capacity of PV we are creating
+    storage: 500Mi #the amount of storage we are tying to claim
+  hostPath:
+    path: "/mnt" # path to which we are creating the volume
+  persistentVolumeReclaimPolicy: Delete

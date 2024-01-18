@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "orderer2.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "orderer2.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.orderer2.autoscaling.enabled }}
+  replicas: {{ .Values.orderer2.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "orderer2.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "orderer2.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.orderer2.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.orderer2.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.orderer2.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.orderer2.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.orderer2.podSecurityContext | nindent 8 }}
+      containers:
+        - name: orderer2
+          securityContext:
+            {{- toYaml .Values.orderer2.securityContext | nindent 12 }}
+          image: "{{ .Values.orderer2.image.repository }}:{{ .Values.orderer2.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.orderer2.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.orderer2.service.containerPort }}
+              protocol: {{ .Values.orderer2.service.protocol }}
+          resources:
+            {{- toYaml .Values.orderer2.resources | nindent 12 }}
+          env:
+            - name: CONFIGTX_ORDERER_ADDRESSES
+              value: {{ include "orderer2.fullname" . | quote }}
+            - name: ORDERER_GENERAL_LISTENADDRESS
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_LISTENADDRESS | quote }}
+            - name: ORDERER_GENERAL_LISTENPORT
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_LISTENPORT | quote }}
+            - name: ORDERER_GENERAL_LOGLEVEL
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_LOGLEVEL | quote }}
+            - name: ORDERER_GENERAL_LOCALMSPDIR
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_LOCALMSPDIR | quote }}
+            - name: ORDERER_GENERAL_LOCALMSPID
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_LOCALMSPID | quote }}
+            - name: ORDERER_GENERAL_GENESISMETHOD
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_GENESISMETHOD | quote }}
+            - name: ORDERER_GENERAL_GENESISFILE
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_GENESISFILE | quote }}
+            - name: ORDERER_GENERAL_TLS_ENABLED
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_TLS_ENABLED | quote }}
+            - name: ORDERER_GENERAL_TLS_PRIVATEKEY
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_TLS_PRIVATEKEY | quote }}
+            - name: ORDERER_GENERAL_TLS_CERTIFICATE
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_TLS_CERTIFICATE | quote }}
+            - name: ORDERER_GENERAL_TLS_ROOTCAS
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_TLS_ROOTCAS | quote }}
+            - name: ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY | quote }}
+            - name: ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE
+              value: {{ .Values.orderer2.envVars.ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE | quote }}
+          volumeMounts:
+            - mountPath: /organizations
+              name: fabricfiles
+              subPath: organizations
+            - mountPath: /system-genesis-block
+              name: fabricfiles
+              subPath: system-genesis-block 
+            - mountPath: /var/hyperledger/production/orderer
+              name: fabricfiles
+              subPath: ordererstate/orderer2
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm

@@ -1,0 +1,187 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: joinchannel
+  namespace: default
+data:
+  create-channel.sh: |
+  
+    sleep 160
+
+    export CHANNEL_NAME="mychannel"
+
+    echo "Create application channel"
+
+    peer channel create -o {{ include "orderer.fullname" . }}:7050 -c ${CHANNEL_NAME} -f ./channel-artifacts/${CHANNEL_NAME}.tx --outputBlock ./channel-artifacts/${CHANNEL_NAME}.block --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+  org1join-upd.sh: |
+
+    sleep 20
+
+    export CHANNEL_NAME="mychannel"
+    export FUNCTION_NAME="InitCCLogger"
+    # export CC1_INIT_FUNCTION="InitCCLogger"
+    # export CC2_INIT_FUNCTION="InitCCLogger"
+    # export CC3_INIT_FUNCTION="InitCCLogger"
+    # export CC4_INIT_FUNCTION="InitCCLogger"
+    chaincodeNames=("loggingbasic")
+   
+    ##################### Join Channel Org1 #####################
+    echo "Join channel Org1"
+    peer channel join -b ./channel-artifacts/${CHANNEL_NAME}.block --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+
+    ##################### Update anchor peers Org1 #####################
+    echo "Update anchors peers Org1"
+    peer channel update -o {{ include "orderer.fullname" . }}:7050  -c ${CHANNEL_NAME} -f ./channel-artifacts/Org1MSPanchors.tx --tls  --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+    # peer channel update -o mylogging-dltlogging-orderer:7050  -c mychannel -f ./channel-artifacts/Org1MSPanchors.tx --tls  --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    for chaincodeName in "${chaincodeNames[@]}"
+    do
+      ##################### Install chaincode Org1 #####################
+      echo "Install chaincode on Org1 $chaincodeName"
+      peer lifecycle chaincode install /opt/gopath/src/github.com/chaincode/${chaincodeName}1.tgz 
+      # echo "Install chaincode on Org1 loggingbasic"
+      # peer lifecycle chaincode install /opt/gopath/src/github.com/chaincode/loggingbasic1.tgz 
+
+      echo "Query installed chaincode for Org1"
+      peer lifecycle chaincode queryinstalled --output json
+      
+      ##################### Calculate Package ID for Org1 #####################
+      echo "Calculate packageID for Org1"
+      export PACKAGE_ID_ORG1=$(peer lifecycle chaincode calculatepackageid /opt/gopath/src/github.com/chaincode/${chaincodeName}1.tgz)
+      # export PACKAGE_ID_ORG1=$(peer lifecycle chaincode calculatepackageid /opt/gopath/src/github.com/chaincode/loggingbasic1.tgz)
+      # echo $PACKAGE_ID_ORG1
+
+      echo "$PACKAGE_ID_ORG1" > chaincodeids/${chaincodeName}1.txt
+      
+      echo "ftasame"
+
+      ###### TWRA VGAINOUN TA DEPLOYMENTS ########
+      
+      sleep 4
+
+      ##################### Approve chaincode for Org1 #####################
+      echo "Approve chaincode $chaincodeName on Org1"
+      peer lifecycle chaincode approveformyorg --channelID ${CHANNEL_NAME} --name ${chaincodeName} --version 1.0 --init-required --package-id ${PACKAGE_ID_ORG1} --sequence 1 -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+      # echo "Approve chaincode loggingbasic on Org1"
+      # peer lifecycle chaincode approveformyorg --channelID ${CHANNEL_NAME} --name loggingbasic --version 1.0 --init-required --package-id ${PACKAGE_ID_ORG1} --sequence 1 -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+
+      sleep 4
+
+      ##################### Query Approved chaincode #####################
+      echo "Query Approved chaincode $chaincodeName on Org1"
+      peer lifecycle chaincode queryapproved -C ${CHANNEL_NAME} -n ${chaincodeName} --sequence 1 --output json
+      # echo "Query Approved chaincode loggingbasic on Org1"
+      # peer lifecycle chaincode queryapproved -C ${CHANNEL_NAME} -n loggingbasic --sequence 1 --output json
+
+      sleep 4
+
+      ##################### Checkcommitreadiness #####################
+      echo "Checkcommitreadiness $chaincodeName for Org1"
+      peer lifecycle chaincode checkcommitreadiness --channelID ${CHANNEL_NAME} --name ${chaincodeName} --version 1.0 --sequence 1 --init-required -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json 
+      # echo "Checkcommitreadiness loggingbasic for Org1"
+      # peer lifecycle chaincode checkcommitreadiness --channelID ${CHANNEL_NAME} --name loggingbasic --version 1.0 --sequence 1 --init-required -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json   
+      
+      sleep 4
+
+      ##################### Commit chaincodes (only in one Org) ##################### -> AYTO PAEI GIA TON ORG_2
+      echo "Commit chaincode $chaincodeName"
+      peer lifecycle chaincode commit -o {{ include "orderer.fullname" . }}:7050 --channelID ${CHANNEL_NAME} --name ${chaincodeName} --version 1.0 --sequence 1 --init-required --tls true --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --peerAddresses {{ include "peer0org1.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses {{ include "peer0org2.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt 
+      # echo "Commit chaincode loggingbasic"
+      # peer lifecycle chaincode commit -o {{ include "orderer.fullname" . }}:7050 --channelID ${CHANNEL_NAME} --name loggingbasic --version 1.0 --sequence 1 --init-required --tls true --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --peerAddresses {{ include "peer0org1.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses {{ include "peer0org2.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt 
+
+      sleep 4
+
+      ##################### Query committed chaincodes #####################
+      echo "Query committed chaincodes for Org1"
+      peer lifecycle chaincode querycommitted -C ${CHANNEL_NAME} --output json
+
+    done
+
+    sleep 50
+
+    for chaincodeName in "${chaincodeNames[@]}"
+    do
+      ##################### Init Ledger #####################
+      echo "Init ledger for chaincode $chaincodeName and init function $FUNCTION_NAME"
+      peer chaincode invoke -o {{ include "orderer.fullname" . }}:7050 --isInit --tls true --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C ${CHANNEL_NAME} -n $chaincodeName --peerAddresses {{ include "peer0org1.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses {{ include "peer0org2.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["'"${FUNCTION_NAME}"'"]}' --waitForEvent
+      # echo "Init ledger for chaincode loggingbasic and init function $CC1_INIT_FUNCTION"
+      # peer chaincode invoke -o {{ include "orderer.fullname" . }}:7050 --isInit --tls true --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C ${CHANNEL_NAME} -n loggingbasic --peerAddresses {{ include "peer0org1.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses {{ include "peer0org2.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["'"${CC1_INIT_FUNCTION}"'"]}' --waitForEvent
+
+      # peer chaincode invoke -o {{ include "orderer.fullname" . }}:7050  --tls true --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C ${CHANNEL_NAME} -n $chaincodeName --peerAddresses {{ include "peer0org1.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses {{ include "peer0org2.fullname" . }}:7051 --tlsRootCertFiles /organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["'"${FUNCTION_NAME}"'"]}' --waitForEvent
+    
+    done
+
+
+  org2join-upd.sh: |
+    
+    sleep 178
+
+    export CHANNEL_NAME="mychannel"
+    chaincodeNames=("loggingbasic")
+
+    ##################### Join Channel Org2 #####################
+    echo "Join channel Org2"
+    peer channel join -b ./channel-artifacts/${CHANNEL_NAME}.block --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+
+    ##################### Update anchor peers Org2 #####################
+    echo "Update anchors peers Org2"
+    peer channel update -o {{ include "orderer.fullname" . }}:7050  -c ${CHANNEL_NAME} -f ./channel-artifacts/Org2MSPanchors.tx --tls  --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+    
+    for chaincodeName in "${chaincodeNames[@]}"
+    do
+
+      ##################### Install chaincode Org2 #####################
+      echo "Install chaincode on Org2 $chaincodeName"
+      peer lifecycle chaincode install /opt/gopath/src/github.com/chaincode/${chaincodeName}2.tgz 
+      # echo "Install chaincode on Org2 loggingbasic"
+      # peer lifecycle chaincode install /opt/gopath/src/github.com/chaincode/loggingbasic2.tgz 
+      
+      echo "Query installed chaincode for Org2"
+      peer lifecycle chaincode queryinstalled --output json
+
+      ##################### Calculate Package ID for Org2 #####################
+      echo "Calculate packageID for Org2"
+      export PACKAGE_ID_ORG2=$(peer lifecycle chaincode calculatepackageid /opt/gopath/src/github.com/chaincode/${chaincodeName}2.tgz)
+      # export PACKAGE_ID_ORG2=$(peer lifecycle chaincode calculatepackageid /opt/gopath/src/github.com/chaincode/loggingbasic2.tgz)
+      # echo $PACKAGE_ID_ORG2
+
+      echo "$PACKAGE_ID_ORG2" > chaincodeids/${chaincodeName}2.txt
+      
+      echo "ftasame"
+
+      ###### TWRA VGAINOUN TA DEPLOYMENTS ########
+
+      sleep 4
+
+      ##################### Approve chaincode for Org2 #####################
+      echo "Approve chaincode $chaincodeName on Org2"
+      peer lifecycle chaincode approveformyorg --channelID ${CHANNEL_NAME} --name ${chaincodeName} --version 1.0 --init-required --package-id ${PACKAGE_ID_ORG2} --sequence 1 -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+      # echo "Approve chaincode loggingbasic on Org2"
+      # peer lifecycle chaincode approveformyorg --channelID ${CHANNEL_NAME} --name loggingbasic --version 1.0 --init-required --package-id ${PACKAGE_ID_ORG2} --sequence 1 -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem 
+
+      sleep 4
+
+      ##################### Query Approved chaincode #####################
+      echo "Query Approved chaincode $chaincodeName on Org2"
+      peer lifecycle chaincode queryapproved -C ${CHANNEL_NAME} -n ${chaincodeName} --sequence 1 --output json
+      # echo "Query Approved chaincode loggingbasic on Org2"
+      # peer lifecycle chaincode queryapproved -C ${CHANNEL_NAME} -n loggingbasic --sequence 1 --output json
+
+      sleep 4
+
+      ##################### Checkcommitreadiness #####################
+      echo "Checkcommitreadiness $chaincodeName for Org2"
+      peer lifecycle chaincode checkcommitreadiness --channelID ${CHANNEL_NAME} --name ${chaincodeName} --version 1.0 --sequence 1 --init-required -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json 
+      # echo "Checkcommitreadiness loggingbasic for Org2"
+      # peer lifecycle chaincode checkcommitreadiness --channelID ${CHANNEL_NAME} --name loggingbasic --version 1.0 --sequence 1 --init-required -o {{ include "orderer.fullname" . }}:7050 --tls --cafile /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem --output json   
+      
+      ##################### Commit chaincodes (only in one Org) ##################### -> AYTO PAEI GIA TON ORG_2
+      sleep 9
+
+      ##################### Query committed chaincodes #####################
+      echo "Query committed chaincodes for Org2"
+      peer lifecycle chaincode querycommitted -C ${CHANNEL_NAME} --output json
+
+      ##################### Init Ledger #####################
+    done

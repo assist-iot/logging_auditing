@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "caorderer.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "caorderer.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.caorderer.autoscaling.enabled }}
+  replicas: {{ .Values.caorderer.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "caorderer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "caorderer.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.caorderer.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.caorderer.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.caorderer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.caorderer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.caorderer.podSecurityContext | nindent 8 }}
+      containers:
+        - name: caorderer
+          securityContext:
+            {{- toYaml .Values.caorderer.securityContext | nindent 12 }}
+          image: "{{ .Values.caorderer.image.repository }}:{{ .Values.caorderer.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.caorderer.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.caorderer.service.containerPort }}
+              protocol: {{ .Values.caorderer.service.protocol }}
+          resources:
+            {{- toYaml .Values.caorderer.resources | nindent 12 }}
+          command: ["fabric-ca-server" ,"start", "-b" ,"admin:adminpw","--port","10054", "-d"]
+          env:
+            - name: FABRIC_CA_SERVER_CA_NAME
+              value: {{ include "caorderer.fullname" . | quote }}
+            - name: FABRIC_CA_SERVER_TLS_ENABLED
+              value: {{ .Values.caorderer.envVars.FABRIC_CA_SERVER_TLS_ENABLED | quote }}
+            - name: FABRIC_CA_SERVER_CSR_CN
+              value: {{ include "caorderer.fullname" . | quote }}
+            - name: FABRIC_CA_SERVER_CSR_HOSTS
+              value: {{ include "caorderer.fullname" . | quote }}
+          volumeMounts:
+            - mountPath: /etc/hyperledger/fabric-ca-server
+              name: fabricfiles
+              subPath: organizations/fabric-ca/ordererOrg 
+            - mountPath: /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+              name: orderercaconfig-volume
+              subPath: fabric-ca-server-config.yaml 
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm
+        - name: orderercaconfig-volume
+          configMap:
+            name: orderercaconfig

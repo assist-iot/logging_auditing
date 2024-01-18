@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "peer0org2.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "peer0org2.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.peer0org2.service.type }}
+  ports:
+    - name: grpc
+      port: 7051
+      targetPort: 7051 
+      # nodePort: 30000
+      protocol: TCP
+    - name: event
+      port: 7061
+      targetPort: 7061
+      protocol: TCP
+      # nodePort: 30443
+    - name: couchdb
+      port: 5984
+      targetPort: 5984
+      # nodePort: 30001
+      protocol: TCP
+  selector:
+    {{- include "peer0org2.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,266 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hlfcerts
+  namespace: default
+data:
+  orderer-certs.sh: |
+  
+    set -x
+
+    sleep 20
+
+    mkdir -p organizations/ordererOrganizations/example.com
+  
+    export FABRIC_CA_CLIENT_HOME=/organizations/ordererOrganizations/example.com
+    echo $FABRIC_CA_CLIENT_HOME
+
+    fabric-ca-client enroll -u https://admin:adminpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} --tls.certfiles "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+
+    echo 'NodeOUs:
+      Enable: true
+      ClientOUIdentifier:
+        Certificate: cacerts/{{ include "caorderer.fullname" . }}-10054-{{ include "caorderer.fullname" . }}.pem
+        OrganizationalUnitIdentifier: client
+      PeerOUIdentifier:
+        Certificate: cacerts/{{ include "caorderer.fullname" . }}-10054-{{ include "caorderer.fullname" . }}.pem
+        OrganizationalUnitIdentifier: peer
+      AdminOUIdentifier:
+        Certificate: cacerts/{{ include "caorderer.fullname" . }}-10054-{{ include "caorderer.fullname" . }}.pem
+        OrganizationalUnitIdentifier: admin
+      OrdererOUIdentifier:
+        Certificate: cacerts/{{ include "caorderer.fullname" . }}-10054-{{ include "caorderer.fullname" . }}.pem
+        OrganizationalUnitIdentifier: orderer' > "/organizations/ordererOrganizations/example.com/msp/config.yaml"
+
+    echo "Register orderer"
+    fabric-ca-client register --caname {{ include "caorderer.fullname" . }} --id.name orderer --id.secret ordererpw --id.type orderer --tls.certfiles "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+    echo "Register orderer2"
+
+    fabric-ca-client register --caname {{ include "caorderer.fullname" . }} --id.name orderer2 --id.secret ordererpw --id.type orderer --tls.certfiles  "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+    echo "Register orderer3"
+    fabric-ca-client register --caname {{ include "caorderer.fullname" . }} --id.name orderer3 --id.secret ordererpw --id.type orderer --tls.certfiles  "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+    echo "Register the orderer admin"
+    fabric-ca-client register --caname {{ include "caorderer.fullname" . }} --id.name ordererAdmin --id.secret ordererAdminpw --id.type admin --tls.certfiles "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+    mkdir -p organizations/ordererOrganizations/example.com/orderers
+
+
+    # -----------------------------------------------------------------------
+    #  Orderer
+    
+    mkdir -p organizations/ordererOrganizations/example.com/orderers/orderer.example.com
+
+    echo "Generate the orderer msp"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp --csr.hosts orderer.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer --csr.hosts {{ include "orderer.fullname" . }} --tls.certfiles "/organizations/fabric-ca/ordererOrg/tls-cert.pem"
+
+    cp /organizations/ordererOrganizations/example.com/msp/config.yaml /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/config.yaml
+
+    echo "Generate the orderer-tls certificates"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls --enrollment.profile tls --csr.hosts orderer.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer --csr.hosts {{ include "orderer.fullname" . }} --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/ca.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/signcerts/* /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/keystore/* /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.key
+
+    mkdir -p /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    mkdir -p /organizations/ordererOrganizations/example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    mkdir -p organizations/ordererOrganizations/example.com/users
+    mkdir -p organizations/ordererOrganizations/example.com/users/Admin@example.com
+
+
+    # -----------------------------------------------------------------------
+    #  Orderer 2
+
+    mkdir -p organizations/ordererOrganizations/example.com/orderers/orderer2.example.com
+
+    echo "Generate the orderer2 msp"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp --csr.hosts orderer2.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer2 --csr.hosts {{ include "orderer2.fullname" . }} --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/msp/config.yaml /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/config.yaml
+
+    echo "Generate the orderer2-tls certificates"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls --enrollment.profile tls --csr.hosts orderer2.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer2 --csr.hosts {{ include "orderer2.fullname" . }} --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/ca.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/signcerts/* /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/keystore/* /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/server.key
+
+    mkdir -p /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    mkdir -p /organizations/ordererOrganizations/example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+    
+
+    # -----------------------------------------------------------------------
+    #  Orderer 3
+
+    mkdir -p organizations/ordererOrganizations/example.com/orderers/orderer3.example.com
+
+    echo "Generate the orderer3 msp"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp --csr.hosts orderer3.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer3 --csr.hosts {{ include "orderer3.fullname" . }} --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/msp/config.yaml /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/config.yaml
+
+    echo "Generate the orderer3-tls certificates"
+    fabric-ca-client enroll -u https://orderer:ordererpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls --enrollment.profile tls --csr.hosts orderer3.example.com --csr.hosts localhost --csr.hosts {{ include "caorderer.fullname" . }} --csr.hosts orderer3 --csr.hosts {{ include "orderer3.fullname" . }} --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/ca.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/signcerts/* /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.crt
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/keystore/* /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/server.key
+
+    mkdir -p /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    mkdir -p /organizations/ordererOrganizations/example.com/msp/tlscacerts
+    cp /organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/tlscacerts/* /organizations/ordererOrganizations/example.com/msp/tlscacerts/tlsca.example.com-cert.pem
+
+    echo "Generate the admin msp"
+    fabric-ca-client enroll -u https://ordererAdmin:ordererAdminpw@{{ include "caorderer.fullname" . }}:10054 --caname {{ include "caorderer.fullname" . }} -M /organizations/ordererOrganizations/example.com/users/Admin@example.com/msp --tls.certfiles /organizations/fabric-ca/ordererOrg/tls-cert.pem
+
+    cp /organizations/ordererOrganizations/example.com/msp/config.yaml /organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/config.yaml
+
+    { set +x; } 2>/dev/null
+  
+  org1-certs.sh: |
+
+    set -x
+
+    sleep 10
+
+    mkdir -p /organizations/peerOrganizations/org1.example.com/
+
+    export FABRIC_CA_CLIENT_HOME=/organizations/peerOrganizations/org1.example.com/
+
+
+    fabric-ca-client enroll -u https://admin:adminpw@{{ include "caorg1.fullname" . }}:7054 --caname {{ include "caorg1.fullname" . }} --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+    echo 'NodeOUs:
+      Enable: true
+      ClientOUIdentifier:
+        Certificate: cacerts/{{ include "caorg1.fullname" . }}-7054-{{ include "caorg1.fullname" . }}.pem
+        OrganizationalUnitIdentifier: client
+      PeerOUIdentifier:
+        Certificate: cacerts/{{ include "caorg1.fullname" . }}-7054-{{ include "caorg1.fullname" . }}.pem
+        OrganizationalUnitIdentifier: peer
+      AdminOUIdentifier:
+        Certificate: cacerts/{{ include "caorg1.fullname" . }}-7054-{{ include "caorg1.fullname" . }}.pem
+        OrganizationalUnitIdentifier: admin
+      OrdererOUIdentifier:
+        Certificate: cacerts/{{ include "caorg1.fullname" . }}-7054-{{ include "caorg1.fullname" . }}.pem
+        OrganizationalUnitIdentifier: orderer' > "/organizations/peerOrganizations/org1.example.com/msp/config.yaml"
+
+
+    fabric-ca-client register --caname {{ include "caorg1.fullname" . }} --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+
+    fabric-ca-client register --caname {{ include "caorg1.fullname" . }} --id.name user1 --id.secret user1pw --id.type client --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+
+    fabric-ca-client register --caname {{ include "caorg1.fullname" . }} --id.name org1admin --id.secret org1adminpw --id.type admin --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+
+    fabric-ca-client enroll -u https://peer0:peer0pw@{{ include "caorg1.fullname" . }}:7054 --caname {{ include "caorg1.fullname" . }} -M "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp" --csr.hosts peer0.org1.example.com --csr.hosts peer0org1 --csr.hosts {{ include "peer0org1.fullname" . }}  --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+
+    cp "/organizations/peerOrganizations/org1.example.com/msp/config.yaml" "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/config.yaml"
+
+    fabric-ca-client enroll -u https://peer0:peer0pw@{{ include "caorg1.fullname" . }}:7054 --caname {{ include "caorg1.fullname" . }} -M "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls" --enrollment.profile tls --csr.hosts peer0.org1.example.com --csr.hosts peer0org1 --csr.hosts {{ include "caorg1.fullname" . }} --csr.hosts localhost --csr.hosts {{ include "peer0org1.fullname" . }}  --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt"
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/signcerts/"* "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt"
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/keystore/"* "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key"
+
+    mkdir -p "/organizations/peerOrganizations/org1.example.com/msp/tlscacerts"
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org1.example.com/msp/tlscacerts/ca.crt"
+
+    mkdir -p "/organizations/peerOrganizations/org1.example.com/tlsca"
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem"
+
+    mkdir -p "/organizations/peerOrganizations/org1.example.com/ca"
+    cp "/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/cacerts/"* "/organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem"
+
+
+    fabric-ca-client enroll -u https://user1:user1pw@{{ include "caorg1.fullname" . }}:7054 --caname {{ include "caorg1.fullname" . }} -M "/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp" --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org1.example.com/msp/config.yaml" "/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/config.yaml"
+
+    fabric-ca-client enroll -u https://org1admin:org1adminpw@{{ include "caorg1.fullname" . }}:7054 --caname {{ include "caorg1.fullname" . }} -M "/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp" --tls.certfiles "/organizations/fabric-ca/org1/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org1.example.com/msp/config.yaml" "/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/config.yaml"
+
+    { set +x; } 2>/dev/null
+
+  org2-certs.sh: |
+    
+    set -x
+
+    sleep 10
+
+    mkdir -p /organizations/peerOrganizations/org2.example.com/
+    export FABRIC_CA_CLIENT_HOME=/organizations/peerOrganizations/org2.example.com/
+
+    fabric-ca-client enroll -u https://admin:adminpw@{{ include "caorg2.fullname" . }}:8054 --caname {{ include "caorg2.fullname" . }} --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    echo 'NodeOUs:
+      Enable: true
+      ClientOUIdentifier:
+        Certificate: cacerts/{{ include "caorg2.fullname" . }}-8054-{{ include "caorg2.fullname" . }}.pem
+        OrganizationalUnitIdentifier: client
+      PeerOUIdentifier:
+        Certificate: cacerts/{{ include "caorg2.fullname" . }}-8054-{{ include "caorg2.fullname" . }}.pem
+        OrganizationalUnitIdentifier: peer
+      AdminOUIdentifier:
+        Certificate: cacerts/{{ include "caorg2.fullname" . }}-8054-{{ include "caorg2.fullname" . }}.pem
+        OrganizationalUnitIdentifier: admin
+      OrdererOUIdentifier:
+        Certificate: cacerts/{{ include "caorg2.fullname" . }}-8054-{{ include "caorg2.fullname" . }}.pem
+        OrganizationalUnitIdentifier: orderer' > "/organizations/peerOrganizations/org2.example.com/msp/config.yaml"
+
+
+
+    fabric-ca-client register --caname {{ include "caorg2.fullname" . }} --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    fabric-ca-client register --caname {{ include "caorg2.fullname" . }} --id.name user1 --id.secret user1pw --id.type client --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    fabric-ca-client register --caname {{ include "caorg2.fullname" . }} --id.name org2admin --id.secret org2adminpw --id.type admin --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    fabric-ca-client enroll -u https://peer0:peer0pw@{{ include "caorg2.fullname" . }}:8054 --caname {{ include "caorg2.fullname" . }} -M "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp" --csr.hosts peer0.org2.example.com --csr.hosts peer0org2 --csr.hosts {{ include "peer0org2.fullname" . }}   --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org2.example.com/msp/config.yaml" "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/config.yaml"
+
+    fabric-ca-client enroll -u https://peer0:peer0pw@{{ include "caorg2.fullname" . }}:8054 --caname {{ include "caorg2.fullname" . }} -M "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls" --enrollment.profile tls --csr.hosts peer0.org2.example.com --csr.hosts peer0org2 --csr.hosts {{ include "caorg2.fullname" . }} --csr.hosts localhost --csr.hosts {{ include "peer0org2.fullname" . }}   --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/signcerts/"* "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/server.crt"
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/keystore/"* "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/server.key"
+
+    mkdir -p "/organizations/peerOrganizations/org2.example.com/msp/tlscacerts"
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org2.example.com/msp/tlscacerts/ca.crt"
+
+    mkdir -p "/organizations/peerOrganizations/org2.example.com/tlsca"
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/tlscacerts/"* "/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem"
+
+    mkdir -p "/organizations/peerOrganizations/org2.example.com/ca"
+    cp "/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/cacerts/"* "/organizations/peerOrganizations/org2.example.com/ca/ca.org2.example.com-cert.pem"
+
+
+    fabric-ca-client enroll -u https://user1:user1pw@{{ include "caorg2.fullname" . }}:8054 --caname {{ include "caorg2.fullname" . }} -M "/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp" --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org2.example.com/msp/config.yaml" "/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/config.yaml"
+
+    fabric-ca-client enroll -u https://org2admin:org2adminpw@{{ include "caorg2.fullname" . }}:8054 --caname {{ include "caorg2.fullname" . }} -M "/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp" --tls.certfiles "/organizations/fabric-ca/org2/tls-cert.pem"
+
+    cp "/organizations/peerOrganizations/org2.example.com/msp/config.yaml" "/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/config.yaml"
+
+    { set +x; } 2>/dev/null
+    

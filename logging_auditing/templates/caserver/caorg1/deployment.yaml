@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "caorg1.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "caorg1.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.caorg1.autoscaling.enabled }}
+  replicas: {{ .Values.caorg1.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "caorg1.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "caorg1.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.caorg1.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.caorg1.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.caorg1.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.caorg1.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.caorg1.podSecurityContext | nindent 8 }}
+      containers:
+        - name: caorg1
+          securityContext:
+            {{- toYaml .Values.caorg1.securityContext | nindent 12 }}
+          image: "{{ .Values.caorg1.image.repository }}:{{ .Values.caorg1.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.caorg1.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.caorg1.service.containerPort }}
+              protocol: {{ .Values.caorg1.service.protocol }}
+          resources:
+            {{- toYaml .Values.caorg1.resources | nindent 12 }}
+          command: ["fabric-ca-server" , "start", "-b" ,"admin:adminpw","--port","7054", "-d"]
+          env:
+            - name: FABRIC_CA_SERVER_CA_NAME
+              value: {{ include "caorg1.fullname" . | quote }}
+            - name: FABRIC_CA_SERVER_TLS_ENABLED
+              value: {{ .Values.caorg1.envVars.FABRIC_CA_SERVER_TLS_ENABLED | quote }}
+            - name: FABRIC_CA_SERVER_CSR_CN
+              value: {{ include "caorg1.fullname" . | quote }}
+            - name: FABRIC_CA_SERVER_CSR_HOSTS
+              value: {{ include "caorg1.fullname" . | quote }}
+          volumeMounts:
+            - mountPath: /etc/hyperledger/fabric-ca-server
+              name: fabricfiles
+              subPath: organizations/fabric-ca/org1
+            - mountPath: /etc/hyperledger/fabric-ca-server/fabric-ca-server-config.yaml
+              name: org1caconfig-volume
+              subPath: fabric-ca-server-config.yaml   
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm
+        - name: org1caconfig-volume
+          configMap:
+            name: org1caconfig          

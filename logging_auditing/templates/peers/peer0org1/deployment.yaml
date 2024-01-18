@@ -1,0 +1,178 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "peer0org1.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "peer0org1.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.peer0org1.autoscaling.enabled }}
+  replicas: {{ .Values.peer0org1.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "peer0org1.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "peer0org1.labels" . | nindent 8 }}
+    spec:
+      {{- with .Values.peer0org1.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.enablerNodeSelector }}
+        {{- with .Values.peer0org1.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.peer0org1.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.peer0org1.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.peer0org1.podSecurityContext | nindent 8 }}
+      containers:
+        - name: peer0org1
+          securityContext:
+            {{- toYaml .Values.peer0org1.securityContext | nindent 12 }}
+          image: "{{ .Values.peer0org1.image.repository }}:{{ .Values.peer0org1.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.peer0org1.image.pullPolicy }}
+          ports:
+            - containerPort: 7051
+              protocol: TCP
+            - containerPort: 7052
+              protocol: TCP
+            - containerPort: 7053
+              protocol: TCP
+            - containerPort: 9443
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.peer0org1.resources | nindent 12 }}
+          # command: ["sh", "-c", "peer node start"]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              sleep 180
+              peer node start
+          env:
+            - name: CORE_PEER_ADDRESSAUTODETECT
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_ADDRESSAUTODETECT | quote }}
+            - name: CORE_PEER_ID
+              value: {{ include "peer0org1.fullname" . }}
+            - name: CORE_PEER_ADDRESS
+              value: {{ include "peer0org1.fullname" . }}:7051
+            - name: CORE_PEER_LISTENADDRESS
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_LISTENADDRESS | quote }}
+            - name: CORE_PEER_EVENTS_ADDRESS
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_EVENTS_ADDRESS | quote }}
+            - name: CORE_PEER_GOSSIP_BOOTSTRAP
+              value: {{ include "peer0org1.fullname" . }}:7051
+            - name: CORE_PEER_GOSSIP_ENDPOINT
+              value: {{ include "peer0org1.fullname" . }}:7051
+            - name: CORE_PEER_GOSSIP_EXTERNALENDPOINT
+              value: {{ include "peer0org1.fullname" . }}:7051
+            - name: CORE_PEER_GOSSIP_ORGLEADER
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_GOSSIP_ORGLEADER | quote }}
+            - name: CORE_PEER_GOSSIP_USELEADERELECTION
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_GOSSIP_USELEADERELECTION | quote }}
+            - name: CORE_PEER_PROFILE_ENABLED
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_PROFILE_ENABLED | quote }}
+            - name: CORE_PEER_LOCALMSPID
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_LOCALMSPID | quote }}
+            - name: CORE_PEER_MSPCONFIGPATH
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_MSPCONFIGPATH | quote }}
+            - name: FABRIC_LOGGING_SPEC
+              value: {{ .Values.peer0org1.envVars.FABRIC_LOGGING_SPEC | quote }}
+            - name: CORE_PEER_TLS_ENABLED
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_TLS_ENABLED | quote }}
+            - name: CORE_PEER_TLS_CERT_FILE
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_TLS_CERT_FILE | quote }}
+            - name: CORE_PEER_TLS_KEY_FILE
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_TLS_KEY_FILE | quote }}
+            - name: CORE_PEER_TLS_ROOTCERT_FILE
+              value: {{ .Values.peer0org1.envVars.CORE_PEER_TLS_ROOTCERT_FILE | quote }}
+            - name: CORE_LEDGER_STATE_STATEDATABASE
+              value: {{ .Values.peer0org1.envVars.CORE_LEDGER_STATE_STATEDATABASE | quote }}
+            - name: CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS
+              value: {{ .Values.peer0org1.envVars.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS | quote }}
+            - name: FABRIC_CFG_PATH
+              value: {{ .Values.peer0org1.envVars.FABRIC_CFG_PATH | quote }}
+            - name: CORE_OPERATIONS_LISTENADDRESS
+              value: {{ .Values.peer0org1.envVars.CORE_OPERATIONS_LISTENADDRESS | quote }}
+          volumeMounts:
+            - mountPath: /opt/gopath/src/github.com/chaincode/
+              name: hlfchaincode-volume
+            - mountPath: /organizations
+              name: fabricfiles
+              subPath: organizations
+            - mountPath: /var/hyperledger/production
+              name: fabricfiles
+              subPath: state/org1/peer0
+            - mountPath: /etc/hyperledger/fabric/core.yaml
+              name: buildersconfig
+              subPath: core.yaml
+            - mountPath: /builders/external/bin/detect
+              name: external-builder-detect
+              subPath: detect
+            - mountPath: /builders/external/bin/build
+              name: external-builder-build
+              subPath: build
+            - mountPath: /builders/external/bin/release
+              name: external-builder-release
+              subPath: release
+
+        - name: couchdb
+          securityContext:
+            {{- toYaml .Values.couchdb.securityContext | nindent 12 }}
+          image: "{{ .Values.couchdb.image.repository }}:{{ .Values.couchdb.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.couchdb.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /var/lib/couchdb
+              name: fabricfiles
+              subPath: state/org1/peer0-couchdb
+
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm
+        - name: buildersconfig
+          configMap:
+            name: buildersconfig
+            items:
+              - key: core.yaml
+                path: core.yaml
+        - name: external-builder-detect
+          configMap:
+            name: buildersconfig
+            items:
+              - key: detect
+                path: detect
+                mode: 0544
+        - name: external-builder-build
+          configMap:
+            name: buildersconfig
+            items:
+              - key: build
+                path: build
+                mode: 0544
+        - name: external-builder-release
+          configMap:
+            name: buildersconfig
+            items:
+              - key: release
+                path: release
+                mode: 0544
+        - name: hlfchaincode-volume
+          configMap:
+            name: hlfchaincode

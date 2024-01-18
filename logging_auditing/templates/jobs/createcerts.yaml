@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "createcerts.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "createcerts.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm
+        - name: hlfcerts-volume
+          configMap:
+            name: hlfcerts
+      {{- with .Values.createcerts.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.createcerts.podSecurityContext | nindent 8 }}
+      containers:
+      - name: createcerts
+        securityContext:
+          {{- toYaml .Values.createcerts.securityContext | nindent 12 }}
+        image: "{{ .Values.createcerts.image.repository }}:{{ .Values.createcerts.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.createcerts.image.pullPolicy }}
+        resources:
+            {{- toYaml .Values.createcerts.resources | nindent 12 }}
+        volumeMounts:
+          - mountPath: /organizations
+            name: fabricfiles
+            subPath: organizations
+          - mountPath: /scriptshlfcerts
+            name: hlfcerts-volume
+        command:
+          - /bin/sh
+          - -c
+          - |
+            CFILE=/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/config.yaml
+            if [ -f "$CFILE" ]; then
+              echo "$CFILE exists."
+              echo "Skipping certs generation, certs already exists"
+            else
+              echo "$CFILE does not exist."
+              echo "shell scripts in /scriptshlfcerts"
+              ls -lh /scriptshlfcerts
+              echo "copy scripts to /tmp"
+              cp /scriptshlfcerts/*.sh /tmp
+              echo "apply 'chmod +x' to /tmp/*.sh"
+              chmod +x /tmp/*.sh
+              sleep 20
+              echo "execute shell scripts now"
+              ./tmp/orderer-certs.sh &&
+              ./tmp/org1-certs.sh 
+              ./tmp/org2-certs.sh 
+            fi
+      restartPolicy: {{ .Values.createcerts.restartPolicy }}
+  backoffLimit: {{ .Values.createcerts.backoffLimit }}

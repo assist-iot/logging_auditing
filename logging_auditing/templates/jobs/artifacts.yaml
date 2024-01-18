@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "artifacts.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "artifacts.labels" . | nindent 4 }}
+spec:
+  template:
+    spec:
+      volumes:
+        - name: fabricfiles
+          persistentVolumeClaim:
+            claimName: hlfpvchelm
+        - name: fabrictools-volume
+          configMap:
+            name: fabrictools
+        - name: configtx-volume
+          configMap:
+            name: hlfconfigtx
+        - name: connectionprofiles-volume
+          configMap:
+            name: hlfconnectionprofiles
+      {{- with .Values.artifacts.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.enablerNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.artifacts.podSecurityContext | nindent 8 }}
+      containers:
+      - name: artifacts
+        workingDir: /
+        securityContext:
+          {{- toYaml .Values.artifacts.securityContext | nindent 12 }}
+        image: "{{ .Values.artifacts.image.repository }}:{{ .Values.artifacts.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.artifacts.image.pullPolicy }}
+        resources:
+            {{- toYaml .Values.artifacts.resources | nindent 12 }}
+        volumeMounts:
+          - mountPath: /organizations
+            name: fabricfiles
+            subPath: organizations
+          - mountPath: /configtx
+            name: configtx-volume
+          - mountPath: /system-genesis-block
+            name: fabricfiles
+            subPath: system-genesis-block
+          - mountPath: /channel-artifacts
+            name: fabricfiles
+            subPath: channel-artifacts
+          - mountPath: /scriptshlftools
+            name: fabrictools-volume
+          - mountPath: /connection-profiles
+            name: connectionprofiles-volume
+        command: 
+          - /bin/bash
+          - -c
+          - |
+            CFILE=/channel-artifacts/mychannel.block
+            if [ -f "$CFILE" ]; then
+              echo "$CFILE exists."
+              echo "Skipping artifact generation, artifacts already exists"
+            else
+              echo "$CFILE does not exist."
+              sleep 80
+              echo "config in /configtx" 
+              ls -lh /configtx
+              echo "copy configtx to /tmp"
+              cp /configtx/*.yaml /tmp
+              echo "shell scripts in /scriptshlftools"
+              ls -lh /scriptshlftools
+              echo "copy scripts to /tmp"
+              cp /scriptshlftools/*.sh /tmp
+              echo "connection-profiles in /connection-profiles" 
+              ls -lh /connection-profiles
+              echo "copy connection-profiles to /tmp"
+              cp /connection-profiles/*.sh /tmp
+              cp /connection-profiles/*.json /tmp
+              cp /connection-profiles/*.yaml /tmp
+              echo "apply 'chmod +x' to /tmp/*.sh"
+              chmod +x /tmp/*.sh
+              echo "execute shell scripts now"
+              ./tmp/createGenesis.sh &&
+              ./tmp/createChannel.sh ${CHANNEL_NAME} &&
+              ./tmp/ccp.sh 
+            fi
+      restartPolicy: {{ .Values.artifacts.restartPolicy }}
+  backoffLimit: {{ .Values.artifacts.backoffLimit }}
