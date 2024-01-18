@@ -1466,7 +1466,7 @@ kvbasicorg2:
 api:
   tier: external
   image:
-    repository: assistiot/dlt_api:2.0.0
+    repository: assistiot/dlt_api
     pullPolicy: Always
     # Overrides the image tag whose default is the chart appVersion.
     tag: "2.0.0"
