@@ -3,12 +3,12 @@ entries:
   dltlogging:
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2024-01-18T16:07:24.959089648+02:00"
+    created: "2024-02-12T12:54:43.988359656+02:00"
     description: A Helm chart for Kubernetes
-    digest: b2d9b5829fa4136a94e2b1e7de90ebde3abc3ce50aa33091f57dfb16f658d33c
+    digest: 196cf1e6bc0c54f6ac189d12b553ea2ec7643a61922c8efc08db7f079d5e3a83
     name: dltlogging
     type: application
     urls:
     - dltlogging-0.2.0.tgz
     version: 0.2.0
-generated: "2024-01-18T16:07:24.955638511+02:00"
+generated: "2024-02-12T12:54:43.985208865+02:00"
