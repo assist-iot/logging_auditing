@@ -1,0 +1,72 @@
+ASSIST-IoT - Architecture for Scalable, Self-*, human-centric, Intelligent, Secure, and Tactile next generation IoT
+
+This project has received funding from the European Union's Horizon 2020 research and innovation programme under grant agreement No 957258.
+
+DLT logging and auditing enabler
+
+Copyright 2020-2023 Centre for Research and Tehnology Hellas / Information Technologies Institute
+
+I. Included Software
+
+- Hyperledger Fabric (https://github.com/hyperledger/fabric) Apache 2.0 License
+- Go programming language (https://github.com/golang/go) BSD 3-Clause “New” or “Revised” License
+- Express JS (https://github.com/expressjs/express) MIT License
+
+
+II. Used Software
+
+- @hapi/joi: https://www.npmjs.com/package/@hapi/joi, Custom license
+- body-parser: https://www.npmjs.com/package/body-parser, MIT license
+- busboy: https://www.npmjs.com/package/busboy, MIT license
+- canonical-json: https://www.npmjs.com/package/canonical-json, MIT license
+- canonicalize-json: https://www.npmjs.com/package/canonicalize-json, ISC license
+- cors: https://www.npmjs.com/package/cors, MIT license
+- express: https://www.npmjs.com/package/express, MIT license
+- fabric-ca-client: https://www.npmjs.com/package/fabric-ca-client, Apache-2.0 license
+- fabric-network: https://www.npmjs.com/package/fabric-network, Apache-2.0 license
+- file-system: https://www.npmjs.com/package/file-system, MIT license
+- form-data: https://www.npmjs.com/package/form-data, MIT license
+- jsfive: https://www.npmjs.com/package/jsfive, MIT license
+- json-canonicalize: https://www.npmjs.com/package/json-canonicalize, MIT license
+- json-stable-stringify: https://www.npmjs.com/package/json-stable-stringify, MIT license
+- multer: https://www.npmjs.com/package/multer, MIT license
+- node-fetch: https://www.npmjs.com/package/node-fetch, MIT license
+- nodemon: https://www.npmjs.com/package/nodemon, MIT license
+- pkcs11js: https://www.npmjs.com/package/pkcs11js, ISC license
+- react-native-fetch: https://www.npmjs.com/package/react-native-fetch, MIT license
+- read-npy-file: https://www.npmjs.com/package/read-npy-file, MIT license
+- uuid: https://www.npmjs.com/package/uuid, MIT license
+- github.com/hyperledger/fabric-chaincode-go (https://github.com/hyperledger/fabric-chaincode-go), Apache-2.0 license
+- github.com/hyperledger/fabric-protos-go (https://github.com/hyperledger/fabric-protos-go), Apache-2.0 license
+- github.com/onsi/ginkgo (https://github.com/onsi/ginkgo), Apache-2.0 license
+- github.com/onsi/gomega (https://github.com/onsi/gomega), Apache-2.0 license
+- github.com/s7techlab/cckit (https://github.com/s7techlab/cckit), Apache-2.0 license
+- github.com/gogo/protobuf (https://github.com/gogo/protobuf), BSD-3-Clause license
+- github.com/golang/protobuf (https://github.com/golang/protobuf), BSD-3-Clause license
+- github.com/mwitkow/go-proto-validators (https://github.com/mwitkow/go-proto-validators), Apache-2.0 license
+- github.com/pkg/errors (https://github.com/pkg/errors), BSD-2-Clause license
+- github.com/sykesm/zap-logfmt (https://github.com/sykesm/zap-logfmt), MIT license
+- go.uber.org/atomic (https://github.com/uber-go/atomic), MIT license
+- go.uber.org/multierr (https://github.com/uber-go/multierr), MIT license
+- go.uber.org/zap (https://github.com/uber-go/zap), Apache-2.0 license
+- golang.org/x/crypto (https://github.com/golang/crypto), BSD-3-Clause license
+- golang.org/x/net (https://github.com/golang/net), BSD-3-Clause license
+- golang.org/x/sys (https://github.com/golang/sys), BSD-3-Clause license
+- golang.org/x/text (https://github.com/golang/text), BSD-3-Clause license
+- golang.org/x/xerrors (https://github.com/golang/xerrors), BSD-3-Clause license
+- google.golang.org/genproto (https://github.com/google/go-genproto), Apache-2.0 license
+- google.golang.org/grpc (https://github.com/grpc/grpc-go), Apache-2.0 license
+- google.golang.org/protobuf (https://github.com/protocolbuffers/protobuf-go), BSD-3-Clause license
+- gopkg.in/fsnotify.v1 (https://github.com/fsnotify/fsnotify), BSD-3-Clause license
+- gopkg.in/tomb.v1 (https://github.com/go-tomb/tomb), BSD-2-Clause license
+- gopkg.in/yaml.v2 (https://github.com/go-yaml/yaml), Apache-2.0 license
+
+III. List of licenses
+
+- BSD-3-Clause license (https://opensource.org/license/bsd-3-clause/)
+- BSD-3-Clause license (https://opensource.org/license/bsd-2-clause)
+- Apache-2.0 license (https://www.apache.org/licenses/LICENSE-2.0)
+- MIT license (https://opensource.org/license/mit/)
+- Server Side Public License (SSPL) v1.0 (https://www.mongodb.com/legal/licensing/server-side-public-license)
+- Oracle Binary Code License Agreement for the Java SE Platform Products (https://www.oracle.com/downloads/licenses/binary-code-license.html)
+- ISC license (https://www.isc.org/licenses/)

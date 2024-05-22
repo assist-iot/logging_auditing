@@ -1,6 +1,6 @@
 apiVersion: v2
 name: dltlogging
-description: A Helm chart for Kubernetes
+description: ASSIST-IoT DLT Logging and auditing enabler
 
 # A chart can be either an 'application' or a 'library' chart.
 #
